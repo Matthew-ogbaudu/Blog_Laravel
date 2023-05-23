@@ -35,8 +35,10 @@ Route::get('/', function () {
 Route::get('/posts/{post}', function ($postt) {
     //find a post by its slug and pass it to a view called "pst"
     $post=Post::find($postt);
+    //dd($post);
 
     return view('post', ['single' => Post::find($postt)]);
     //return $slug;
 //format wildcard with regular expression
-})->where('single', '[A-z_\-]+');
+});
+//where('single', '[A-z_\-]+');

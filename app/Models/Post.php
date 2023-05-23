@@ -90,6 +90,10 @@ class Post
 
         //of all the blog posts find the one with a matching requested slug
         $posts=static::myall();
-        return ($posts->firstWhere('slug',$postt));
+        $post2=($posts->firstWhere('slug',$postt));
+        if(!$post2){
+            throw new ModelNotFoundException();
+        }
+        return $post2;
     }
 }
