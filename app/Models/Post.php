@@ -2,98 +2,54 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\File;
-use Spatie\YamlFrontMatter\YamlFrontMatter;
-//use PhpParser\Node\Scalar\MagicConst\File;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Post
+class Post extends Model
 {
-    public $title;
-    public $excerpt;
+    use HasFactory;
+   // protected $fillable=['title','excerpt','body','category_id','slug'];
+    protected $guarded=[];
+    protected $with=['category','author'];
+    public function scopeFilter($query, array $filter){
+//        $posts = Post::latest();
 
-    public $date;
-
-    public $body;
-    public $slug;
-    public function __construct($title, $excerpt, $date, $body, $slug){
-        $this->title=$title;
-        $this->excerpt=$excerpt;
-        $this->date=$date;
-        $this->body=$body;
-        $this->slug=$slug;
-    }
-    public static function myall()
-    {
-//        $files= File::files(resource_path("posts/"));
-//       return array_map(function($file){
-//           return $file->getContents();
-//       },$files);
-//       }
-//        //return File::file(resource_path("posts/"));
-        //using yaml
-       // $documents=YamlFrontMatter::parseFile(resource_path('posts/myfirstpost.html'));
-        //$document=[];
-        // usign yaml
-        return cache()->rememberForever('posts.all', function() {
-            return collect(File::files(resource_path("posts")))
-                ->map(fn($file) => YamlFrontMatter::parseFile($file))
-                ->map(fn($document) => new Post(
-                    $document->title,
-                    $document->excerpt,
-                    $document->date,
-                    $document->body(),
-                    $document->slug)
-
-                )->sortByDesc('date');
+        $query->when($filter['search'] ?? false, function($query,$search) {
+//            $query->where('title', 'like', '%' . request('search') . '%')
+//                ->orWhere('body', 'like', '%' . request('search') . '%');
+            $query->where(fn($query)=>
+            $query->where('title','like', '%'.$search. '%')
+                ->orWhere('body', 'like','%'.$search.'%'));
         });
-
-
-
-//
-//        $files=File::files(resource_path('posts/'));
-//        $posts=[];
-//        foreach($files as $file){
-            //$document=YamlFrontMatter::parseFile($file);
-//            $posts[]=new Post(
-//                $document->title,
-//                $document->excerpt,
-//                $document->date,
-//                $document->body(),
-//                $document->slug);
-//        }
-//        return $posts;
+        $query->when($filter['category'] ?? false, function($query,$category) {
+//            $query->where('title', 'like', '%' . request('search') . '%')
+//                ->orWhere('body', 'like', '%' . request('search') . '%');
+            $query->whereExists(fn($query)=>
+                $query->from('categories')
+                ->whereColumn('categories.id','posts.category_id')
+                ->where('categories.slug',$category));
+        });
+        $query->when($filter['author'] ?? false, function($query,$author) {
+//            $query->where('title', 'like', '%' . request('search') . '%')
+//                ->orWhere('body', 'like', '%' . request('search') . '%');
+            $query->whereHas('author', fn($query)=>
+                $query->where('username', $author));
+        });
     }
-
-    public static function find($postt)
+//    public function getRouteKeyName()
+//{
+//    return'slug';
+//}
+    public function category(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-//        base_path();
-//        $post2 = resource_path("posts/{$postt}.html");
-//        /// ddd($post2);
-//        //check if route existsxw
-//        if (!file_exists($post2)) {
-//            // ddd('file does not exist');
-//            throw new ModelNotFoundException();
-//
-//            //return redirect('/');
-//        }
-//
-//        //caching
-//// $post= cache()->remember("posts.{$postt}", 10, function () use ($post2){
-////     var_dump('file_get_contents');
-////     return file_get_contents($post2);
-//// });
-////method 2 for caching
-//        $post = cache()->remember("posts.{$postt}", 10, fn() => file_get_contents($post2));
-//        return $post;
-//        //$post=file_get_contents($post2);
-
-        //of all the blog posts find the one with a matching requested slug
-        $posts=static::myall();
-        $post2=($posts->firstWhere('slug',$postt));
-        if(!$post2){
-            throw new ModelNotFoundException();
-        }
-        return $post2;
+        //laravel relation types hasoNE, hasMany, belongsTo, belongsToMany
+        return $this->belongsTo(Category::class);
+      // return $this->belongsTo();
     }
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
 }
